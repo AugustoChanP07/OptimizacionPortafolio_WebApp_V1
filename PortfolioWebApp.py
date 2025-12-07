@@ -121,7 +121,7 @@ if not Assets.empty:
     
     #Varianza = Varianza de los rendimientos x 1 año
     Variance = log_returns.var() * 252
-    Sharp_Ratio = Returns / (Volatility - (Tasa_Libre_Riesgo / 100))
+    Sharp_Ratio = (Returns - (Tasa_Libre_Riesgo / 100)) / (Volatility)
     
     #Valores Z
     z_95 = norm.ppf(0.95)
@@ -492,4 +492,5 @@ if not Assets.empty:
     st.dataframe(MaxSharpPort_weights_DF_constrained, use_container_width=True)
 
 else:
+
     st.warning("No se han cargado datos válidos para mostrar análisis.")
