@@ -98,18 +98,6 @@ if not Assets.empty:
 
     st.title("Optimización de portafolios con frontera eficiente")
     st.write("By Augusto Chan Pacheco")
-        
-    #Obtenemos los rendimientos logarítmicos de los precios de cierre
-    log_returns = np.log(Assets / Assets.shift(1))
-    st.subheader("Rendimientos diarios (LN)")
-    
-    #Texto explicativo sobre los rendimientos logarítmicos
-    st.write("Los rendimientos diarios representan el cambio porcentual el precio de un activo de un día al siguiente. " \
-    "Permiten analizar la evolución del valor de una inversión en el corto plazo y " \
-    "son fundamentales para calcular métricas como la volatilidad, la covarianza entre activos y el riesgo total del portafolio.")
-    
-    #Proyectamos el dataframe de los rendimientos  
-    st.dataframe(log_returns)
 
 # - - Métricas importantes - -
 
@@ -491,6 +479,19 @@ if not Assets.empty:
     
     st.dataframe(MaxSharpPort_weights_DF_constrained, use_container_width=True)
 
+    #Obtenemos los rendimientos logarítmicos de los precios de cierre
+    log_returns = np.log(Assets / Assets.shift(1))
+    st.subheader("Rendimientos diarios (LN)")
+    
+    #Texto explicativo sobre los rendimientos logarítmicos
+    st.write("Los rendimientos diarios representan el cambio porcentual el precio de un activo de un día al siguiente. " \
+    "Permiten analizar la evolución del valor de una inversión en el corto plazo y " \
+    "son fundamentales para calcular métricas como la volatilidad, la covarianza entre activos y el riesgo total del portafolio.")
+    
+    #Proyectamos el dataframe de los rendimientos  
+    st.dataframe(log_returns)
+
 else:
 
     st.warning("No se han cargado datos válidos para mostrar análisis.")
+
