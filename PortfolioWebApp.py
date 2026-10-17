@@ -143,7 +143,7 @@ if not Assets.empty:
     })
 
     #Darle formato de dos decimales y porcentaje al Dataframe
-    AssetsInfo = AssetsInfo.applymap(lambda x: f"{x*100:.2f}%")
+    AssetsInfo = AssetsInfo.map(lambda x: f"{x*100:.2f}%")
     
     st.subheader("Información individual")
     
