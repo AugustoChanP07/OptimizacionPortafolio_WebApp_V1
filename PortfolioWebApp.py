@@ -48,10 +48,10 @@ with st.sidebar:
     PesMax, PesMin = st.columns(2)
     
     with PesMax:
-        Peso_Maximo = st.number_input("Peso Máximo", min_value=0.0, step=0.1)
+        Peso_Maximo = st.number_input("Peso Máximo", min_value=0.0, max_value=1.0, value=1.0, step=0.05)
     
     with PesMin:
-        Peso_Minimo = st.number_input("Peso Mínimo", min_value=0.0, step=0.1)
+        Peso_Minimo = st.number_input("Peso Mínimo", min_value=0.0, max_value=1.0, value=0.0, step=0.05)
 
 
 # - - Introducir los tickets 
@@ -109,7 +109,8 @@ if not Assets.empty:
     "son fundamentales para calcular métricas como la volatilidad, la covarianza entre activos y el riesgo total del portafolio.")
     
     #Proyectamos el dataframe de los rendimientos  
-    st.dataframe(log_returns)
+    #Mostramos primero las fechas más recientes (solo para visualizar, no altera los cálculos)
+    st.dataframe(log_returns.sort_index(ascending=False))
 
 # - - Métricas importantes - -
 
@@ -121,7 +122,7 @@ if not Assets.empty:
     
     #Varianza = Varianza de los rendimientos x 1 año
     Variance = log_returns.var() * 252
-    Sharp_Ratio = Returns / (Volatility - (Tasa_Libre_Riesgo / 100))
+    Sharp_Ratio = (Returns - (Tasa_Libre_Riesgo / 100)) / Volatility
     
     #Valores Z
     z_95 = norm.ppf(0.95)
@@ -135,7 +136,7 @@ if not Assets.empty:
 # - - Creación del dataframe para métricas importantes - -
     AssetsInfo = pd.DataFrame({
         "Rendimiento": Returns,
-        "Volatibilidad": Volatility,
+        "Volatilidad": Volatility,
         "Varianza": Variance,
         "Sharp Ratio": Sharp_Ratio,
         "VaR 95%": VaR_95,
@@ -143,7 +144,9 @@ if not Assets.empty:
     })
 
     #Darle formato de dos decimales y porcentaje al Dataframe
-    AssetsInfo = AssetsInfo.map(lambda x: f"{x*100:.2f}%")
+    cols_pct = ["Rendimiento", "Volatilidad", "Varianza", "VaR 95%", "VaR 99%"]
+    AssetsInfo[cols_pct] = AssetsInfo[cols_pct].map(lambda x: f"{x*100:.2f}%")
+    AssetsInfo["Sharp Ratio"] = AssetsInfo["Sharp Ratio"].map(lambda x: f"{x:.2f}")
     
     st.subheader("Información individual")
     
@@ -172,7 +175,7 @@ if not Assets.empty:
     fig_Prices.update_layout(width=950, height=550)
 
     #Hacemos gráfica lineal interactiva de los precios de cierre
-    st.plotly_chart(fig_Prices, use_container_width=True)
+    st.plotly_chart(fig_Prices)
 
 
 #- - - Gráfico de cambio porcentual acumulado base 0 - - - 
@@ -190,7 +193,7 @@ if not Assets.empty:
     Change.update_layout(width=950, height=550)
 
     #Hacemos gráfica lineal interactiva de los cambios porcentual base 0 
-    st.plotly_chart(Change, use_container_width=True)
+    st.plotly_chart(Change)
 
 
 #- - - Gráfico de rendimientos logarítmicos - - -
@@ -205,7 +208,7 @@ if not Assets.empty:
     LogPlot.update_layout(width=950, height=550)
 
     #Hacemos la gráfica los rendimientos logarítmicos
-    st.plotly_chart(LogPlot, use_container_width=True)
+    st.plotly_chart(LogPlot)
 
 
 # - - - Elaboración de la matriz de correlación y covarianza - - -
@@ -251,7 +254,8 @@ if not Assets.empty:
 # - - - Elaboración de la frontera eficiente - - -
     
     #Obtenemos el número de tickets
-    noa = len(symbols)
+    valid_assets = list(Assets.columns)
+    noa = len(valid_assets)
 
     #Asignamos un peso al azar 
     weights = np.random.random(noa)
@@ -325,11 +329,11 @@ if not Assets.empty:
     for tret in trets:
         
         #Restricciones el portafolio debe tener el retorno y la suma de sus pesos menor a 1
-        cons = ({'type': 'eq','fun': lambda x, tr=tret: port_ret(x) - tr},
+        cons_target = ({'type': 'eq','fun': lambda x, tr=tret: port_ret(x) - tr},
                 {'type': 'eq','fun': lambda x: np.sum(x) - 1})
         
         res = sco.minimize(port_vol, eweights, method='SLSQP',
-                            bounds=bnds, constraints=cons)
+                            bounds=bnds, constraints=cons_target)
         
         #Devuelve la volatibilidad mínima
         tvols.append(res['fun'])
@@ -395,7 +399,7 @@ if not Assets.empty:
 
     #Dataframe con los pesos para obtener mínima volatilidad
     min_vol_weights_df = pd.DataFrame({
-        'Asset': symbols,
+        'Asset': valid_assets,
         'Weight': optv['x']})
 
     #Ordenar los pesos
@@ -410,14 +414,14 @@ if not Assets.empty:
              mientras que tiene una volatilidad anual de {MinVol_Volatility: .2%}")
     
     #Tabla con los pesos de mínima volatilidad
-    st.dataframe(min_vol_weights_df, use_container_width=True)
+    st.dataframe(min_vol_weights_df, width="stretch")
 
     
 # - - Portafolio de que maximiza el Riesgo-Rendimiento - - 
 
     #Dataframe con los pesos que maximizan el Riesgo-Rendimiento
     MaxSharpPort_weights_DF = pd.DataFrame({
-        'Asset': symbols,
+        'Asset': valid_assets,
         'Weight': opts['x']})
 
     #Ordenar los pesos
@@ -432,10 +436,16 @@ if not Assets.empty:
              mientras que tiene una volatilidad anual de {MaxSharpPort_Volatility: .2%}")
     
     #Tabla con los pesos que maximizan la relación riesgo rendimiento
-    st.dataframe(MaxSharpPort_weights_DF, use_container_width=True)
+    st.dataframe(MaxSharpPort_weights_DF, width="stretch")
 
 
 # - - - Optimización de portafolios en base a máximos y mínimos - - -
+
+    #Validar que los límites de pesos sean factibles
+    if Peso_Minimo * noa > 1 or Peso_Maximo * noa < 1 or Peso_Minimo > Peso_Maximo:
+        st.error("Los pesos mínimo y máximo no son compatibles con el número de activos "
+                 "(la suma de pesos debe poder ser 100%). Ajusta los límites.")
+        st.stop()
 
     #Restricciones en base a pesos máximos y minimos
     bnds_constrained = tuple((Peso_Minimo, Peso_Maximo) for x in range(noa))
@@ -477,7 +487,7 @@ if not Assets.empty:
 
     #Dataframe del portafolio la relación riesgo-rendimiento con restricciones
     MaxSharpPort_weights_DF_constrained = pd.DataFrame({
-        'Asset': symbols,
+        'Asset': valid_assets,
         'Weight': MaxSharpPort_Weights_constrained.round(4)
     })
 
@@ -489,7 +499,7 @@ if not Assets.empty:
     st.write(f"El portafolio tiene un retorno anualizado de {MaxSharpPort_constrained_Return: .2%} \
              mientras que tiene una volatilidad anual de {MaxSharpPort_constrained_Volatility: .2%}")
     
-    st.dataframe(MaxSharpPort_weights_DF_constrained, use_container_width=True)
+    st.dataframe(MaxSharpPort_weights_DF_constrained, width="stretch")
 
 else:
     st.warning("No se han cargado datos válidos para mostrar análisis.")
